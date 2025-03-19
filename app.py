@@ -102,8 +102,8 @@ class ChromaDBRetriever(BaseRetriever, BaseModel):
 
 def create_rag_chain():
     # Enhanced prompt template for educational context
-    template = """You are an expert accounting professor teaching students about accounting standards. 
-    Use the following pieces of context to answer the question. Pay special attention to definitions, examples, and requirements.
+    template = """You are an expert in Anti-Money Laundering (AML), Countering the Financing of Terrorism (CFT), and Preventing the Financing of Weapons of Mass Destruction (PF) procedures, assisting users with the policies of Commercial Credit and Finance PLC in compliance with Sri Lanka's Financial Intelligence Unit (FIU) regulations. 
+    Use the following pieces of context to answer the question. Pay special attention to definitions, procedures, and requirements.
 
     Context:
     {context}
