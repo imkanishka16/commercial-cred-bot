@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AML Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="chat-container">
+        <header>
+            <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="Commercial Credit Logo" class="logo">
+            <h1>Commercial Credits Knowledge Bot</h1>
+            <p>Ask questions about Anti-Money Laundering procedures</p>
+        </header>
+        <div class="chat-box" id="chatBox">
+            <div class="message bot">
+                <p><strong>Your AML Guide!</strong><br><br>Hello! I’m here to assist with Anti-Money Laundering (AML), Countering Terrorism Financing (CFT), and Preventing Financing of Weapons of Mass Destruction (PF) procedures at Commercial Credit and Finance PLC, aligned with Sri Lanka’s FIU regulations. Ask about KYC, risk assessments, or anything else! What’s your question?</p>
+            </div>
+        </div>
+        <div class="input-container">
+            <input type="text" id="userInput" placeholder="Type your question..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
