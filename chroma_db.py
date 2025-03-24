@@ -251,7 +251,7 @@ def get_pdf_text(pdf_dir: str) -> List[Dict[str, str]]:
     return documents
 
 def create_text_chunks(documents: List[Dict[str, str]], 
-                      chunk_size: int = 1500,  # Suitable for fitting full lists
+                      chunk_size: int = 1000,  # Suitable for fitting full lists
                       chunk_overlap: int = 300) -> List[Dict[str, str]]:
     """Split documents into chunks while preserving concept integrity."""
     splitter = RecursiveCharacterTextSplitter(
