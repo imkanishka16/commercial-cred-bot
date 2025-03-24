@@ -261,7 +261,7 @@ class ChromaDBRetriever(BaseRetriever, BaseModel):
     """Enhanced retriever for educational content"""
     _collection: any = PrivateAttr()
     _embedding_function: any = PrivateAttr()
-    top_k: int = 2  # Increased to ensure more context is retrieved
+    top_k: int = 3  # Increased to ensure more context is retrieved
     min_similarity: float = 0.4  # Lowered to include more potentially relevant chunks
 
     def __init__(self, **data):
