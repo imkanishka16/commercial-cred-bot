@@ -161,13 +161,187 @@
 #     main()
 
 
+# import chromadb
+# from pypdf import PdfReader
+# from langchain.text_splitter import RecursiveCharacterTextSplitter
+# from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+# import os
+# from dotenv import load_dotenv
+# from typing import List, Dict
+# import re
+# import logging
+
+# # Initialize logging
+# logging.basicConfig(level=logging.DEBUG)
+# logger = logging.getLogger(__name__)
+
+# load_dotenv()
+
+# EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+# embedding_function = SentenceTransformerEmbeddingFunction(model_name=EMBEDDING_MODEL)
+
+
+# def clean_text(text: str) -> str:
+#     """Clean and normalize text while preserving document structure."""
+#     text = re.sub(r'(?<=\n)\s*(\d+\.|\•|\-)\s*', r'\n\1 ', text)  # Preserve numbered lists and bullets
+#     text = re.sub(r'\n([A-Z][A-Za-z\s]+)(?=\n)', r'\n### \1', text)  # Preserve section headers
+#     text = re.sub(r'[^\w\s.,;:?!()\[\]{}\-–—•\n\*]', '', text)  # Remove unwanted characters
+#     return text.strip()
+
+
+# def detect_content_type(text: str) -> str:
+#     """Detect the type of content in the text."""
+#     text_lower = text.lower()
+#     if "definition" in text_lower or "means" in text_lower:
+#         return "definition"
+#     elif "example" in text_lower:
+#         return "example"
+#     elif any(word in text_lower for word in ["shall", "must", "required"]):
+#         return "requirement"
+#     elif "disclosure" in text_lower:
+#         return "disclosure"
+#     return "explanation"
+
+
+# def get_pdf_text(pdf_dir: str) -> List[Dict[str, str]]:
+#     """Extract text from PDFs with enhanced structure preservation."""
+#     documents = []
+#     for file_name in os.listdir(pdf_dir):
+#         if not file_name.endswith(".pdf"):
+#             continue
+#         file_path = os.path.join(pdf_dir, file_name)
+#         try:
+#             pdf_reader = PdfReader(file_path)
+#         except Exception as e:
+#             logger.error(f"Failed to read {file_name}: {e}")
+#             continue
+        
+#         # Extract standard info from filename if applicable (not critical for your single document)
+#         standard_match = re.search(r'([A-Z]+)\s*(\d+)', file_name)
+#         standard_info = {
+#             "standard": standard_match.group(1) if standard_match else "",
+#             "number": standard_match.group(2) if standard_match else ""
+#         }
+        
+#         current_section = ""
+#         for page_num, page in enumerate(pdf_reader.pages):
+#             text = page.extract_text() or ""
+#             if text.strip():
+#                 # Enhanced section detection using numbered sections (e.g., "6.2.1")
+#                 section_match = re.search(r'(\d+\.\d+(\.\d+)?)\s+([A-Za-z\s]+)', text)
+#                 if section_match:
+#                     current_section = f"{section_match.group(1)} {section_match.group(3).strip()}"
+#                 elif re.search(r'\n([A-Z][A-Za-z\s]+)(?=\n)', text):
+#                     section_match = re.search(r'\n([A-Z][A-Za-z\s]+)(?=\n)', text)
+#                     current_section = section_match.group(1)
+                
+#                 cleaned_text = clean_text(text)
+#                 logger.debug(f"Page {page_num + 1} Cleaned Text: {cleaned_text[:200]}")
+#                 documents.append({
+#                     "text": cleaned_text,
+#                     "metadata": {
+#                         "source": file_name,
+#                         "page": page_num + 1,
+#                         "section": current_section if current_section else "Unknown",
+#                         "standard_type": standard_info["standard"],
+#                         "standard_number": standard_info["number"],
+#                         "content_type": detect_content_type(cleaned_text)
+#                     }
+#                 })
+#             else:
+#                 logger.debug(f"Skipped page {page_num + 1} in {file_name}: No extractable text")
+    
+#     return documents
+
+
+# def create_text_chunks(documents: List[Dict[str, str]], 
+#                       chunk_size: int = 1000,  # Suitable for fitting full lists
+#                       chunk_overlap: int = 300) -> List[Dict[str, str]]:
+#     """Split documents into chunks while preserving concept integrity."""
+#     splitter = RecursiveCharacterTextSplitter(
+#         chunk_size=chunk_size,
+#         chunk_overlap=chunk_overlap,
+#         length_function=len,
+#         separators=["\n\n", "\n", ". ", ", "]
+#     )
+    
+#     chunks = []
+#     for doc in documents:
+#         texts = splitter.split_text(doc["text"])
+#         for j, text in enumerate(texts):
+#             chunks.append({
+#                 "text": text,
+#                 "metadata": {
+#                     **doc["metadata"],
+#                     "chunk_index": j,
+#                     "content_length": len(text)
+#                 }
+#             })
+    
+#     logger.debug(f"Generated {len(chunks)} chunks from documents")
+#     return chunks
+
+
+# def insert_into_chroma(chunks: List[Dict[str, str]], collection_name: str):
+#     """Insert chunks into ChromaDB with optimized settings."""
+#     chroma_client = chromadb.HttpClient(host='13.232.198.216', port=8000)
+#     try:
+#         chroma_client.delete_collection(collection_name)
+#         logger.info(f"Deleted existing collection: {collection_name}")
+#     except Exception as e:
+#         logger.warning(f"Failed to delete existing collection: {e}")
+    
+#     collection = chroma_client.create_collection(
+#         name=collection_name,
+#         embedding_function=embedding_function,
+#         metadata={"hnsw:space": "cosine"}
+#     )
+    
+#     ids = [f"doc_{i}" for i in range(len(chunks))]
+#     documents = [chunk["text"] for chunk in chunks]
+#     metadatas = [chunk["metadata"] for chunk in chunks]
+    
+#     batch_size = 50
+#     for i in range(0, len(documents), batch_size):
+#         end_idx = min(i + batch_size, len(documents))
+#         try:
+#             collection.add(
+#                 ids=ids[i:end_idx],
+#                 documents=documents[i:end_idx],
+#                 metadatas=metadatas[i:end_idx]
+#             )
+#             logger.debug(f"Inserted batch {i} to {end_idx}")
+#         except Exception as e:
+#             logger.error(f"Error inserting batch {i} to {end_idx}: {e}")
+    
+#     logger.info(f"Inserted {collection.count()} documents into ChromaDB")
+#     return collection.count()
+
+
+# def main():
+#     pdf_dir = "pdf"
+#     collection_name = "commercial_credit"
+    
+#     if not os.path.exists(pdf_dir):
+#         logger.error(f"Directory {pdf_dir} does not exist")
+#         return
+    
+#     documents = get_pdf_text(pdf_dir)
+#     logger.info(f"Extracted text from {len(documents)} documents")
+    
+#     chunks = create_text_chunks(documents)
+#     logger.info(f"Created {len(chunks)} chunks")
+    
+#     doc_count = insert_into_chroma(chunks, collection_name)
+#     logger.info(f"Successfully inserted {doc_count} documents into ChromaDB")
+
+# if __name__ == "__main__":
+#     main()
+
 import chromadb
 from pypdf import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
-import os
-from dotenv import load_dotenv
-from typing import List, Dict
 import re
 import logging
 
@@ -175,20 +349,48 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 embedding_function = SentenceTransformerEmbeddingFunction(model_name=EMBEDDING_MODEL)
 
 def clean_text(text: str) -> str:
-    """Clean and normalize text while preserving document structure."""
-    text = re.sub(r'(?<=\n)\s*(\d+\.|\•|\-)\s*', r'\n\1 ', text)  # Preserve numbered lists and bullets
-    text = re.sub(r'\n([A-Z][A-Za-z\s]+)(?=\n)', r'\n### \1', text)  # Preserve section headers
-    text = re.sub(r'[^\w\s.,;:?!()\[\]{}\-–—•\n\*]', '', text)  # Remove unwanted characters
-    return text.strip()
+    """Clean and normalize text while preserving structure"""
+    try:
+        # Log raw text for debugging
+        logger.debug(f"Raw extracted text: {text[:500]}")
+        
+        # Remove OCR tags
+        text = re.sub(r'<DOCUMENT>|<PAGE\d+>|<CONTENT_FROM_OCR>|</DOCUMENT>|</PAGE\d+>|</CONTENT_FROM_OCR>', '', text)
+        
+        # Replace LaTeX-like formatting and special characters
+        text = re.sub(r'\$\\checkmark\$', '✓', text)  # Fixed: Escaped the backslash
+        text = re.sub(r'\\mathrm{Mn}', 'Mn', text)
+        
+        # Replace multiple spaces with a single space, but preserve newlines
+        text = re.sub(r'[ \t]+', ' ', text)
+        # Normalize line breaks: replace multiple newlines with a single newline
+        text = re.sub(r'\n+', '\n', text)
+        # Preserve list structures by ensuring proper spacing after list markers
+        text = re.sub(r'(?<=\n)(\d+\.|\•|\-|[ivx]+\.)\s*', r'\1 ', text)
+        # Preserve section headers
+        text = re.sub(r'\n([A-Z][A-Za-z\s]+)(?=\n)', r'\n### \1', text)
+        # Clean unwanted characters, but preserve common punctuation
+        text = re.sub(r'[^\w\s.,;:?!()\[\]{}\-–—•\n\*✓]', '', text)
+        # Fix common OCR spacing issues
+        text = re.sub(r'formsKYC', 'forms/KYC', text)
+        text = re.sub(r'COMMERCIALCREDITAND FINANCEPLC', 'COMMERCIAL CREDIT AND FINANCE PLC', text)
+        # Remove leading/trailing whitespace
+        text = text.strip()
+        
+        # Log cleaned text for debugging
+        logger.debug(f"Cleaned text: {text[:500]}")
+        return text
+    except Exception as e:
+        logger.error(f"Error in clean_text: {str(e)}")
+        # Return the original text if cleaning fails, to avoid crashing
+        return text.strip()
 
 def detect_content_type(text: str) -> str:
-    """Detect the type of content in the text."""
+    """Detect type of content"""
     text_lower = text.lower()
     if "definition" in text_lower or "means" in text_lower:
         return "definition"
@@ -200,65 +402,49 @@ def detect_content_type(text: str) -> str:
         return "disclosure"
     return "explanation"
 
-def get_pdf_text(pdf_dir: str) -> List[Dict[str, str]]:
-    """Extract text from PDFs with enhanced structure preservation."""
+def process_pdf_document(pdf_path: str) -> list[dict[str, str]]:
+    """Extract text from a PDF document"""
     documents = []
-    for file_name in os.listdir(pdf_dir):
-        if not file_name.endswith(".pdf"):
-            continue
-        file_path = os.path.join(pdf_dir, file_name)
-        try:
-            pdf_reader = PdfReader(file_path)
-        except Exception as e:
-            logger.error(f"Failed to read {file_name}: {e}")
-            continue
-        
-        # Extract standard info from filename if applicable (not critical for your single document)
-        standard_match = re.search(r'([A-Z]+)\s*(\d+)', file_name)
-        standard_info = {
-            "standard": standard_match.group(1) if standard_match else "",
-            "number": standard_match.group(2) if standard_match else ""
-        }
-        
-        current_section = ""
-        for page_num, page in enumerate(pdf_reader.pages):
-            text = page.extract_text() or ""
-            if text.strip():
-                # Enhanced section detection using numbered sections (e.g., "6.2.1")
-                section_match = re.search(r'(\d+\.\d+(\.\d+)?)\s+([A-Za-z\s]+)', text)
-                if section_match:
-                    current_section = f"{section_match.group(1)} {section_match.group(3).strip()}"
-                elif re.search(r'\n([A-Z][A-Za-z\s]+)(?=\n)', text):
-                    section_match = re.search(r'\n([A-Z][A-Za-z\s]+)(?=\n)', text)
-                    current_section = section_match.group(1)
-                
-                cleaned_text = clean_text(text)
-                logger.debug(f"Page {page_num + 1} Cleaned Text: {cleaned_text[:200]}")
-                documents.append({
-                    "text": cleaned_text,
-                    "metadata": {
-                        "source": file_name,
-                        "page": page_num + 1,
-                        "section": current_section if current_section else "Unknown",
-                        "standard_type": standard_info["standard"],
-                        "standard_number": standard_info["number"],
-                        "content_type": detect_content_type(cleaned_text)
-                    }
-                })
-            else:
-                logger.debug(f"Skipped page {page_num + 1} in {file_name}: No extractable text")
+    pdf_reader = PdfReader(pdf_path)
+    file_name = pdf_path.split('/')[-1]
     
+    standard_match = re.search(r'([A-Z]+)\s*(\d+)', file_name)
+    standard_info = {
+        "standard": standard_match.group(1) if standard_match else "PROCEDURE",
+        "number": standard_match.group(2) if standard_match else "1"
+    }
+    
+    current_section = ""
+    for page_num, page in enumerate(pdf_reader.pages, start=1):
+        text = page.extract_text()
+        if text.strip():
+            section_match = re.search(r'\n([A-Z][A-Za-z\s]+)(?=\n)', text)
+            if section_match:
+                current_section = section_match.group(1)
+            
+            cleaned_text = clean_text(text)
+            documents.append({
+                "text": cleaned_text,
+                "metadata": {
+                    "source": file_name,
+                    "page": page_num,
+                    "section": current_section or "Unknown",
+                    "standard_type": standard_info["standard"],
+                    "standard_number": standard_info["number"],
+                    "content_type": detect_content_type(cleaned_text)
+                }
+            })
     return documents
 
-def create_text_chunks(documents: List[Dict[str, str]], 
-                      chunk_size: int = 1000,  # Suitable for fitting full lists
-                      chunk_overlap: int = 300) -> List[Dict[str, str]]:
-    """Split documents into chunks while preserving concept integrity."""
+def create_text_chunks(documents: list[dict[str, str]], 
+                      chunk_size: int = 2500, 
+                      chunk_overlap: int = 400) -> list[dict[str, str]]:
+    """Split documents into chunks"""
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
         length_function=len,
-        separators=["\n\n", "\n", ". ", ", "]
+        separators=["\n\n", "\n", ". "]
     )
     
     chunks = []
@@ -277,12 +463,12 @@ def create_text_chunks(documents: List[Dict[str, str]],
     logger.debug(f"Generated {len(chunks)} chunks from documents")
     return chunks
 
-def insert_into_chroma(chunks: List[Dict[str, str]], collection_name: str):
-    """Insert chunks into ChromaDB with optimized settings."""
+def insert_into_chroma(chunks: list[dict[str, str]], collection_name: str):
+    """Insert chunks into ChromaDB"""
     chroma_client = chromadb.HttpClient(host='13.232.198.216', port=8000)
+    
     try:
         chroma_client.delete_collection(collection_name)
-        logger.info(f"Deleted existing collection: {collection_name}")
     except Exception as e:
         logger.warning(f"Failed to delete existing collection: {e}")
     
@@ -296,32 +482,29 @@ def insert_into_chroma(chunks: List[Dict[str, str]], collection_name: str):
     documents = [chunk["text"] for chunk in chunks]
     metadatas = [chunk["metadata"] for chunk in chunks]
     
+    for metadata in metadatas:
+        for key, value in metadata.items():
+            if value is None:
+                metadata[key] = ""
+    
     batch_size = 50
     for i in range(0, len(documents), batch_size):
         end_idx = min(i + batch_size, len(documents))
-        try:
-            collection.add(
-                ids=ids[i:end_idx],
-                documents=documents[i:end_idx],
-                metadatas=metadatas[i:end_idx]
-            )
-            logger.debug(f"Inserted batch {i} to {end_idx}")
-        except Exception as e:
-            logger.error(f"Error inserting batch {i} to {end_idx}: {e}")
+        collection.add(
+            ids=ids[i:end_idx],
+            documents=documents[i:end_idx],
+            metadatas=metadatas[i:end_idx]
+        )
     
     logger.info(f"Inserted {collection.count()} documents into ChromaDB")
     return collection.count()
 
 def main():
-    pdf_dir = "pdf"
+    pdf_path = "pdf/source1.pdf"  # Adjust to your PDF path
     collection_name = "commercial_credit"
     
-    if not os.path.exists(pdf_dir):
-        logger.error(f"Directory {pdf_dir} does not exist")
-        return
-    
-    documents = get_pdf_text(pdf_dir)
-    logger.info(f"Extracted text from {len(documents)} documents")
+    documents = process_pdf_document(pdf_path)
+    logger.info(f"Extracted text from {len(documents)} pages")
     
     chunks = create_text_chunks(documents)
     logger.info(f"Created {len(chunks)} chunks")
