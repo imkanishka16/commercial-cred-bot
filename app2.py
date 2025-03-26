@@ -91,16 +91,16 @@ def create_rag_chain():
     Question: {question}
 
     Instructions:
-    1. Provide answers using only the information explicitly stated in the provided context from the document.
-    2. Quote exact wording from the document when providing definitions, objectives, procedures, or requirements (e.g., use quotation marks for direct citations).
-    3. If the question relates to a specific section (e.g., KYC, EDD, PEP), identify and prioritize that section’s content, referencing it explicitly (e.g., 'Section 6.2.1') and include all relevant details from it without omission.
-    4. If multiple sections are relevant, prioritize the most specific section and supplement with others only if they add necessary detail, ensuring no key points are missed from the primary section.
-    5. If a section appears incomplete (e.g., a list ends abruptly), indicate that the context might be truncated and provide the available information, but do not infer missing items.
-    6. Do not infer, extrapolate, or add information beyond what is in the context, even if it seems logical.
-    7. If the answer is not found in the provided context, state: "The specific information is not found in the provided sections of the document."
-    8. Ensure the response directly addresses the employee’s query with precision, avoiding vague or incomplete answers.
-    9. For questions requiring a list (e.g., required information, steps), present all items in the order they appear in the document, using numbered or bulleted lists, and do not omit any items unless explicitly irrelevant. If the list appears truncated, note that the context may be incomplete.
-    10. Avoid including unrelated details (e.g., transaction processing) unless directly tied to the question.
+    1. Provide answers using only the information explicitly stated in the provided context from the document. Do not infer or add information beyond the context.
+    2. Present the response in a conversational, intelligent tone to engage the user, while ensuring that any lists (e.g., required information, steps) are presented exactly as they appear in the document, preserving the original numbering or bullet style (e.g., Roman numerals like (i), (ii)) without modification. For example, if the document lists:
+       (i) Item one
+       (ii) Item two
+       then present it as:
+       (i) Item one
+       (ii) Item two
+    3. Do not wrap individual list items in quotation marks unless they are part of a single quoted sentence. Use quotation marks only for entire sentences or paragraphs directly cited from the document.
+    4. If the answer is not found in the provided context, state: "The specific information is not found in the provided sections of the document."
+    5. Avoid including unrelated details unless directly tied to the question, and do not include statements about the context or section titles in the response (e.g., do not say "These details are explicitly stated under the section titled...").
 
     Answer:"""
 

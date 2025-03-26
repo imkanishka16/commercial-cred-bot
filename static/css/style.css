@@ -93,8 +93,55 @@ header p {
     margin: 0;
 }
 
-.message strong {
+.message ul.info-list {
+    margin: 10px 0;
+    padding-left: 30px;
+}
+
+/* Style for Roman numeral list items */
+.message li.roman-numeral {
+    list-style-type: none; /* Remove default bullets */
+    margin: 8px 0;
+    color: #2c3e50;
+    position: relative;
+}
+
+/* Style for lowercase Roman numerals (e.g., (i), (ii)) */
+.message li.roman-numeral.lower-roman::before {
+    content: '';
+    position: absolute;
+    left: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 5px;
+    height: 5px;
+    background: #a61c1c;
+    border-radius: 50%;
+}
+
+/* Style for uppercase Roman numerals (e.g., I., II.) */
+.message li.roman-numeral.upper-roman::before {
+    content: '';
+    position: absolute;
+    left: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 5px;
+    height: 5px;
+    background: #2c3e50;
+    border-radius: 50%;
+}
+
+/* Style for section headers (e.g., a), b)) */
+.message p.section-header {
+    margin: 15px 0 5px;
     font-weight: bold;
+    color: #a61c1c;
+}
+
+/* Style for regular text sections */
+.message p.section-text {
+    margin: 10px 0;
     color: #2c3e50;
 }
 
