@@ -27,7 +27,7 @@ class ChromaDBRetriever(BaseRetriever, BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        client = chromadb.HttpClient(host='13.232.198.216', port=8000)
+        client = chromadb.HttpClient(host='3.109.139.178', port=8000)
         self._collection = client.get_collection(
             name="commercial_credit",
             embedding_function=embedding_function
